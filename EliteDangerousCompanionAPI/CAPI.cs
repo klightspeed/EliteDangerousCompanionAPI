@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Net;
+﻿using System.Text;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Linq;
+using System;
 
 namespace EliteDangerousCompanionAPI
 {
@@ -13,6 +12,7 @@ namespace EliteDangerousCompanionAPI
         private const string ProfileURL = "https://companion.orerve.net/profile";
         private const string MarketURL = "https://companion.orerve.net/market";
         private const string ShipyardURL = "https://companion.orerve.net/shipyard";
+        private const string CommunityGoalsURL = "https://companion.orerve.net/communitygoals";
         private const string JournalURL = "https://companion.orerve.net/journal";
 
 
@@ -42,6 +42,22 @@ namespace EliteDangerousCompanionAPI
             }
         }
 
+        private string GetString(string url)
+        {
+            var req = OAuth.CreateRequest(url);
+            req.Method = "GET";
+            using (var response = req.GetResponse())
+            {
+                using (var stream = response.GetResponseStream())
+                {
+                    using (var textreader = new StreamReader(stream, Encoding.UTF8))
+                    {
+                        return textreader.ReadToEnd();
+                    }
+                }
+            }
+        }
+
         public JObject GetProfile()
         {
             return Get(ProfileURL);
@@ -55,6 +71,28 @@ namespace EliteDangerousCompanionAPI
         public JObject GetShipyard()
         {
             return Get(ShipyardURL);
+        }
+
+        public JObject GetCommunityGoals()
+        {
+            return Get(CommunityGoalsURL);
+        }
+
+        private JObject TryParseJson(string data)
+        {
+            try
+            {
+                return JObject.Parse(data);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public JObject[] GetJournal(DateTime date)
+        {
+            return GetString(JournalURL + "/" + date.ToString("yyyy/MM/dd")).Split('\n').Select(l => TryParseJson(l)).ToArray();
         }
     }
 }

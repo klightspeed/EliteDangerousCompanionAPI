@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.IO;
 using Newtonsoft.Json;
@@ -243,10 +242,25 @@ namespace EliteDangerousCompanionAPI
 
         public HttpWebRequest CreateRequest(string url)
         {
-            var request = (HttpWebRequest)WebRequest.Create(url);
+            var request = WebRequest.CreateHttp(url);
             request.Headers[HttpRequestHeader.Authorization] = TokenType + " " + AccessToken;
             request.Headers[HttpRequestHeader.UserAgent] = AppName;
             return request;
+        }
+
+        public string Decode()
+        {
+            var request = CreateRequest(AuthServerDecodeURL);
+            using (var response = request.GetResponse())
+            {
+                using (var stream = response.GetResponseStream())
+                {
+                    using (var reader = new StreamReader(stream))
+                    {
+                        return reader.ReadToEnd();
+                    }
+                }
+            }
         }
     }
 }
