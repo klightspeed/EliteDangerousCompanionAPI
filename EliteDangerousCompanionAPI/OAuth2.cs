@@ -236,8 +236,54 @@ namespace EliteDangerousCompanionAPI
 
         public bool Refresh()
         {
-            // TODO: check and refresh token
-            return true;
+            try
+            {
+                string tokenurl = AuthServerTokenURL;
+                string postdata =
+                    "grant_type=refresh_token" +
+                    "&client_id=" + Uri.EscapeDataString(ClientID) +
+                    "&refresh_token=" + Uri.EscapeDataString(RefreshToken);
+
+                var httpreq = WebRequest.CreateHttp(tokenurl);
+                httpreq.Headers[HttpRequestHeader.UserAgent] = AppName;
+                httpreq.Headers[HttpRequestHeader.Accept] = "application/json";
+                httpreq.ContentType = "application/x-www-form-urlencoded";
+                httpreq.Method = "POST";
+
+                using (var stream = httpreq.GetRequestStream())
+                {
+                    using (var textwriter = new StreamWriter(stream))
+                    {
+                        textwriter.Write(postdata);
+                    }
+                }
+
+                JObject jo;
+
+                using (var httpresp = httpreq.GetResponse())
+                {
+                    using (var respstream = httpresp.GetResponseStream())
+                    {
+                        using (var textreader = new StreamReader(respstream))
+                        {
+                            using (var jsonreader = new JsonTextReader(textreader))
+                            {
+                                jo = JObject.Load(jsonreader);
+                            }
+                        }
+                    }
+                }
+
+                AccessToken = jo.Value<string>("access_token");
+                RefreshToken = jo.Value<string>("refresh_token");
+                TokenType = jo.Value<string>("token_type");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         public HttpWebRequest CreateRequest(string url)
@@ -248,10 +294,45 @@ namespace EliteDangerousCompanionAPI
             return request;
         }
 
+        public T ExecuteGetRequest<T>(string url, Func<HttpWebResponse, T> respact, Action<HttpWebRequest> reqact = null)
+        {
+            HttpWebResponse resp = null;
+
+            try
+            {
+                var req = CreateRequest(url);
+                req.Method = "GET";
+                reqact?.Invoke(req);
+                resp = (HttpWebResponse)req.GetResponse();
+                return respact(resp);
+            }
+            catch (WebException ex)
+            {
+                if (ex.Response is HttpWebResponse exresp)
+                {
+                    if (exresp.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        Refresh();
+
+                        var req = CreateRequest(url);
+                        req.Method = "GET";
+                        reqact?.Invoke(req);
+                        resp = (HttpWebResponse)req.GetResponse();
+                        return respact(resp);
+                    }
+                }
+
+                throw;
+            }
+            finally
+            {
+                resp?.Dispose();
+            }
+        }
+
         public string Decode()
         {
-            var request = CreateRequest(AuthServerDecodeURL);
-            using (var response = request.GetResponse())
+            return ExecuteGetRequest(AuthServerDecodeURL, response =>
             {
                 using (var stream = response.GetResponseStream())
                 {
@@ -260,7 +341,7 @@ namespace EliteDangerousCompanionAPI
                         return reader.ReadToEnd();
                     }
                 }
-            }
+            });
         }
     }
 }

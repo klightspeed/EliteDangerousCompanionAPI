@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using System;
+using System.Net;
 
 namespace EliteDangerousCompanionAPI
 {
@@ -15,7 +16,6 @@ namespace EliteDangerousCompanionAPI
         private const string CommunityGoalsURL = "https://companion.orerve.net/communitygoals";
         private const string JournalURL = "https://companion.orerve.net/journal";
 
-
         public OAuth2 OAuth { get; private set; }
 
         public CAPI(OAuth2 auth)
@@ -25,9 +25,7 @@ namespace EliteDangerousCompanionAPI
 
         private JObject Get(string url)
         {
-            var req = OAuth.CreateRequest(url);
-            req.Method = "GET";
-            using (var response = req.GetResponse())
+            return OAuth.ExecuteGetRequest(url, response =>
             {
                 using (var stream = response.GetResponseStream())
                 {
@@ -39,14 +37,12 @@ namespace EliteDangerousCompanionAPI
                         }
                     }
                 }
-            }
+            });
         }
 
         private string GetString(string url)
         {
-            var req = OAuth.CreateRequest(url);
-            req.Method = "GET";
-            using (var response = req.GetResponse())
+            return OAuth.ExecuteGetRequest(url, response =>
             {
                 using (var stream = response.GetResponseStream())
                 {
@@ -55,7 +51,7 @@ namespace EliteDangerousCompanionAPI
                         return textreader.ReadToEnd();
                     }
                 }
-            }
+            });
         }
 
         public JObject GetProfile()
