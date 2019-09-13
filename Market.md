@@ -51,6 +51,15 @@ Example JSON:
 }
 ```
 
+## id
+Market ID of the station
+
+## name
+Name of the station
+
+## outpostType
+Type of outpost, where `starport` covers stations that are not outposts
+
 ## imported
 Dictionary of `"id": "name"` of commodities imported by the system
 

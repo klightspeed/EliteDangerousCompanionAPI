@@ -211,8 +211,16 @@ Note that almost all catalogue systems (e.g. HIP, HD, Gliese) and many
 systems that have been named since the start are manually placed and
 the id represents the index in the system table for these systems.
 
+Sol has system index 0
+
 The highest system index known is 145197 ([V616 Monocerotis](https://www.edsm.net/en/system/id/4012327/name/V616+Monocerotis)), while the
-lowest visited procgen system address is 752903 ([Eephonth AA-A h0](https://www.edsm.net/en/system/id/19119213/name/Eephonth+AA-A+h0)).
+lowest known visited procgen system address is 752903 ([Eephonth AA-A h0](https://www.edsm.net/en/system/id/19119213/name/Eephonth+AA-A+h0)).
+
+### name
+System name
+
+### faction
+System controlling minor faction
 
 ## lastStarport
 Details of starport commander was last docked at
@@ -222,15 +230,19 @@ Market ID of station
 
 ### services
 Dictionary of `"name": "status"` of services offered by the station
+Empty if not currently docked
 
 ### name
 Station Name
+Empty if not currently docked
 
 ### faction
 Station allegiance
+Empty if not currently docked
 
 ### minorfaction
 Minor faction controlling station
+Empty if not currently docked
 
 ## ship
 Details of current ship
@@ -255,6 +267,15 @@ Details of station ship was last docked at
 
 ### system
 Details of system ship was last docked in
+
+#### id
+System index (for manually placed systems) or system address (id64) of system.
+
+#### name
+System name
+
+#### systemaddress
+System Address (id64)
 
 ### alive
 False if ship was destroyed but not yet rebought
