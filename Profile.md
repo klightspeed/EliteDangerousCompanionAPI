@@ -174,184 +174,119 @@ Example JSON:
 }
 ```
 
-## commander
-Commander details
+## Properties
 
-### id
-Commander ID
+* **commander**: Commander details
+  * **id**: Commander ID
+  * **name**: Commander Name
+  * **credits**: Credit balance
+  * **debt**: Credits loaned to commander
+  * **currentShipId**: ID of current ship
+  * **alive**: False if commander has died and not yet resurrected
+  * **docked**: True if commander is docked at a station
+  * **rank**: Commander numeric rank for each major power and game dimension (0 = lowest - e.g. Harmless)
+* **lastSystem**: Details of system commander was last in
+  * **id**: System index (for manually placed systems) or system address of system.
 
-### name
-Commander Name
+    Note that almost all catalogue systems (e.g. HIP, HD, Gliese) and many
+    systems that have been named since the start are manually placed and
+    the id represents the index in the system table for these systems.
 
-### credits
-Credit balance
+    Sol has system index 0
 
-### debt
-Credits loaned to commander
+    The highest system index known is 145197 ([V616 Monocerotis](https://www.edsm.net/en/system/id/4012327/name/V616+Monocerotis)), while the
+    lowest known visited procgen system address is 752903 ([Eephonth AA-A h0](https://www.edsm.net/en/system/id/19119213/name/Eephonth+AA-A+h0)).
 
-### currentShipId
-ID of current ship
+  * **name**: System name
+  * **faction**: System controlling minor faction
+* **lastStarport**: Details of starport commander was last docked at
+  * **id**: Market ID of station
+  * **services**: Dictionary of `"name": "status"` of services offered by the station
 
-### alive
-False if commander has died and not yet resurrected
+    Empty if not currently docked
 
-### docked
-True if commander is docked at a station
+  * **name**: Station Name
+    
+	Empty if not currently docked
 
-### rank
-Commander numeric rank for each major power and game dimension (0 = lowest - e.g. Harmless)
+  * **faction**: Station allegiance
 
-## lastSystem
-Details of system commander was last in
+    Empty if not currently docked
 
-### id
-System index (for manually placed systems) or system address of system.
+  * **minorfaction**: Minor faction controlling station
+    
+	Empty if not currently docked
 
-Note that almost all catalogue systems (e.g. HIP, HD, Gliese) and many
-systems that have been named since the start are manually placed and
-the id represents the index in the system table for these systems.
+* **ship**: Details of current ship
 
-Sol has system index 0
+  * **id**: Persistent index of ship
+  * **name**: Ship type
+  * **value**: Dictionary of `"part": value` of ship value
+    * **hull**: Hull base value
+	* **modules**: Value of all installed modules
+	* **cargo**: Value of current cargo
+	* **total**: Total value of ship and cargo
+  * **shipName**: Commander-assigned ship name
+  * **shipID**: Commander-assigned ship ID
+  * **station**: Details of station ship was last docked at
+    * **id**: Market ID of station
+    * **name**: Station Name
+  * **system**: Details of system ship was last docked in
+    * **id**: System index (for manually placed systems) or system address (id64) of system.
+	* **name**: System name
+	* **systemaddress**: System Address (id64)
+  * **alive**: False if ship was destroyed but not yet rebought
+  * **health**: Health details of ship
+    * **hull**: Hull integrity, where 1000000 is 100%
+	* **shield**: Shield integrity, where 1000000 is 100%
+	* **shieldup**: True if shield is up
+	* **integrity**: Structural integrity, where 1000000 is 100%
+	* **paintwork**: Paintwork integrity, where 1000000 is 100%
+  * **cockpitBreached**: True if the canopy has been breached
+  * **oxygenRemaining**: Remaining oxygen in milliseconds
+  * **modules**: Dictionary of `"slot": {}` of module details
+    * **[]**: Slot symbol of slot module is installed in
+      * **module**: Module base details
+	    * **id**: Commodity ID of module
+	    * **name**: Symbol name of the module
+	    * **locName**: Localised name of the module
+	    * **locDescription**: Localised description of the module
+	    * **value**: Base value of module in credits
+	    * **free**: True if module came with a free ship
+	    * **health**: Module health, where 1000000 is 100%
+	    * **on**: False if module is turned off
+	    * **priority**: Power priority set on module
+	  * **engineer**: Module engineering details
+	    * **engineerName**: Name of engineer that modified the module
+	    * **engineerId**: ID of the engineer that modified the module
+	    * **recipeName**: Symbol name of recipe used to modify the module
+	    * **recipeLocName**: Localised name of the recipe used to modify the module
+	    * **recipeLocDescription**: Localised description of recipe
+	    * **recipeLevel**: Level of recipe used to modify the module
+	  * **WorkInProgress_modifications**: Dictionary of `"name": {}` 
+	    of details of engineering modifications
+	    * **value**: Multiplier value of modification
+	    * **LessIsGood**: True if a lower multiplier is better
+	    * **locName**: Localised name of modification
+	    * **displayValue**: Display value of modification, where
+	      0% is a 1.0 multiplier
+	    * **dir**: Unicode up/down arrow
 
-The highest system index known is 145197 ([V616 Monocerotis](https://www.edsm.net/en/system/id/4012327/name/V616+Monocerotis)), while the
-lowest known visited procgen system address is 752903 ([Eephonth AA-A h0](https://www.edsm.net/en/system/id/19119213/name/Eephonth+AA-A+h0)).
-
-### name
-System name
-
-### faction
-System controlling minor faction
-
-## lastStarport
-Details of starport commander was last docked at
-
-### id
-Market ID of station
-
-### services
-Dictionary of `"name": "status"` of services offered by the station
-Empty if not currently docked
-
-### name
-Station Name
-Empty if not currently docked
-
-### faction
-Station allegiance
-Empty if not currently docked
-
-### minorfaction
-Minor faction controlling station
-Empty if not currently docked
-
-## ship
-Details of current ship
-
-### id
-Persistent index of ship
-
-### name
-Ship type
-
-### value
-Dictionary of `"part": value` of ship value
-
-### shipName
-Commander-assigned ship name
-
-### shipID
-Commander-assigned ship ID
-
-### station
-Details of station ship was last docked at
-
-### system
-Details of system ship was last docked in
-
-#### id
-System index (for manually placed systems) or system address (id64) of system.
-
-#### name
-System name
-
-#### systemaddress
-System Address (id64)
-
-### alive
-False if ship was destroyed but not yet rebought
-
-### health
-Health details of ship
-
-#### hull
-Hull integrity, where 1000000 is 100%
-
-#### shield
-Shield integrity, where 1000000 is 100%
-
-#### shieldup
-True if shield is up
-
-#### integrity
-Structural integrity, where 1000000 is 100%
-
-#### paintwork
-Paint integrity, where 1000000 is 100%
-
-### cockpitBreached
-True if the canopy has been breached
-
-### oxygenRemaining
-Remaining oxygen in milliseconds
-
-### modules
-Dictionary of `"slot": {}` of module details
-
-#### module.id
-Commodity ID of module
-
-#### module.name
-Symbol name of the module
-
-#### module.locName
-Localised name of the module
-
-#### module.locDescription
-Localised description of the module
-
-#### module.value
-Purchase price of module in credits
-
-#### module.free
-True if module came with a free ship
-
-#### module.health
-Module health, where 1000000 is 100%
-
-#### module.on
-False if module is turned off
-
-#### module.priority
-Power priority set on module
-
-#### engineer.engineerName
-Name of engineer that modified the module
-
-#### engineer.engineerId
-ID of the engineer that modified the module
-
-#### engineer.recipeName
-Symbol name of recipe used to modify the module
-
-#### engineer.recipeLocLane
-Localised name of the recipe used to modify the module
-
-#### engineer.recipeLocDescription
-Localised description of recipe
-
-#### engineer.recipeLevel
-Level of recipe used to modify the module
-
-## ships
-Dictionary of `"id": {}` of Details of all ships owned by commander
-
+* **ships**: Dictionary of `"id": {}` of Details of all ships owned by commander
+  * **[]**: Persistent index of ship
+    * **id**: Persistent index of ship
+    * **name**: Ship type
+    * **value**: Dictionary of `"part": value` of ship value
+      * **hull**: Hull base value
+	  * **modules**: Value of all installed modules
+	  * **cargo**: Value of current cargo
+	  * **total**: Total value of ship and cargo
+    * **shipName**: Commander-assigned ship name
+    * **shipID**: Commander-assigned ship ID
+    * **station**: Details of station ship was last docked at
+      * **id**: Market ID of station
+      * **name**: Station Name
+    * **system**: Details of system ship was last docked in
+      * **id**: System index (for manually placed systems) or system address (id64) of system.
+	  * **name**: System name
+	  * **systemaddress**: System Address (id64)
