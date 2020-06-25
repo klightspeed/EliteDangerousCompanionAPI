@@ -205,9 +205,14 @@ namespace EliteDangerousCompanionAPI
 
         public static OAuth2 Load()
         {
+            return Load(null);
+        }
+
+        public static OAuth2 Load(string cmdr)
+        {
             try
             {
-                var jo = JObject.Parse(File.ReadAllText("access-token.json"));
+                var jo = JObject.Parse(File.ReadAllText(cmdr == null ? "access-token.json" : $"access-token_{cmdr}.json"));
 
                 return new OAuth2
                 {
@@ -224,6 +229,11 @@ namespace EliteDangerousCompanionAPI
 
         public void Save()
         {
+            Save(null);
+        }
+
+        public void Save(string cmdr)
+        {
             var jo = new JObject
             {
                 ["access_token"] = AccessToken,
@@ -231,7 +241,7 @@ namespace EliteDangerousCompanionAPI
                 ["token_type"] = TokenType
             };
 
-            File.WriteAllText("access-token.json", jo.ToString());
+            File.WriteAllText(cmdr == null ? "access-token.json" : $"access-token_{cmdr}.json", jo.ToString());
         }
 
         public bool Refresh()

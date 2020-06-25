@@ -17,14 +17,25 @@ namespace EliteDangerousCompanionAPI
         private const string JournalURL = "https://companion.orerve.net/journal";
 
         public OAuth2 OAuth { get; private set; }
+        public bool Beta { get; private set; }
 
-        public CAPI(OAuth2 auth)
+        public CAPI(OAuth2 auth) : this(auth, false)
+        {
+        }
+
+        public CAPI(OAuth2 auth, bool beta)
         {
             OAuth = auth;
+            Beta = beta;
         }
 
         private JObject Get(string url)
         {
+            if (Beta)
+            {
+                url = url.Replace("https://companion", "https://pts-companion");
+            }
+
             return OAuth.ExecuteGetRequest(url, response =>
             {
                 using (var stream = response.GetResponseStream())
