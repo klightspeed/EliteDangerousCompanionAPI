@@ -15,7 +15,7 @@ namespace EliteDangerousCompanionAPI
     {
         private static readonly string ClientID = ConfigurationManager.AppSettings["ClientID"];
         private static readonly string AppName = ConfigurationManager.AppSettings["AppName"];
-        private const string Scope = "capi";
+        private const string Scope = "capi auth";
         private const string AuthServerAuthURL = "https://auth.frontierstore.net/auth";
         private const string AuthServerTokenURL = "https://auth.frontierstore.net/token";
         private const string AuthServerDecodeURL = "https://auth.frontierstore.net/decode";
@@ -52,7 +52,6 @@ namespace EliteDangerousCompanionAPI
                     RedirectURI = $"http://localhost:{port}/";
                     AuthURL = AuthServerAuthURL +
                         "?scope=" + Uri.EscapeDataString(Scope) +
-                        "&audience=frontier" +
                         "&response_type=code" +
                         "&client_id=" + Uri.EscapeDataString(ClientID) +
                         "&code_challenge=" + Uri.EscapeDataString(challenge) +
@@ -307,32 +306,35 @@ namespace EliteDangerousCompanionAPI
         public T ExecuteGetRequest<T>(string url, Func<HttpWebResponse, T> respact, Action<HttpWebRequest> reqact = null)
         {
             HttpWebResponse resp = null;
+            HttpWebRequest req;
 
             try
             {
-                var req = CreateRequest(url);
+                req = CreateRequest(url);
                 req.Method = "GET";
                 reqact?.Invoke(req);
                 resp = (HttpWebResponse)req.GetResponse();
                 return respact(resp);
             }
-            catch (WebException ex)
+            catch (WebException ex) when (ex.Response is HttpWebResponse exresp && exresp.StatusCode == HttpStatusCode.Unauthorized)
             {
-                if (ex.Response is HttpWebResponse exresp)
-                {
-                    if (exresp.StatusCode == HttpStatusCode.Unauthorized)
-                    {
-                        Refresh();
+                using var memstream = new MemoryStream();
 
-                        var req = CreateRequest(url);
-                        req.Method = "GET";
-                        reqact?.Invoke(req);
-                        resp = (HttpWebResponse)req.GetResponse();
-                        return respact(resp);
-                    }
+                using (var exstream = exresp.GetResponseStream())
+                {
+                    exstream.CopyTo(memstream);
                 }
 
-                throw;
+                var exdata = memstream.ToArray();
+                var exstring = Encoding.UTF8.GetString(exdata);
+
+                Refresh();
+
+                req = CreateRequest(url);
+                req.Method = "GET";
+                reqact?.Invoke(req);
+                resp = (HttpWebResponse)req.GetResponse();
+                return respact(resp);
             }
             finally
             {
