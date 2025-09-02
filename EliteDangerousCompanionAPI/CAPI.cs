@@ -18,15 +18,17 @@ namespace EliteDangerousCompanionAPI
 
         public OAuth2 OAuth { get; private set; }
         public bool Beta { get; private set; }
+        public bool Legacy { get; private set; }
 
-        public CAPI(OAuth2 auth) : this(auth, false)
+        public CAPI(OAuth2 auth) : this(auth, false, false)
         {
         }
 
-        public CAPI(OAuth2 auth, bool beta)
+        public CAPI(OAuth2 auth, bool beta, bool legacy)
         {
             OAuth = auth;
             Beta = beta;
+            Legacy = legacy;
         }
 
         private JObject Get(string url)
@@ -34,6 +36,10 @@ namespace EliteDangerousCompanionAPI
             if (Beta)
             {
                 url = url.Replace("https://companion", "https://pts-companion");
+            }
+            else if (Legacy)
+            {
+                url = url.Replace("https://companion", "https://legacy-companion");
             }
 
             return OAuth.ExecuteGetRequest(url, response =>
@@ -53,6 +59,15 @@ namespace EliteDangerousCompanionAPI
 
         private string GetString(string url)
         {
+            if (Beta)
+            {
+                url = url.Replace("https://companion", "https://pts-companion");
+            }
+            else if (Legacy)
+            {
+                url = url.Replace("https://companion", "https://legacy-companion");
+            }
+
             return OAuth.ExecuteGetRequest(url, response =>
             {
                 using (var stream = response.GetResponseStream())
