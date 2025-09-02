@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.IO;
 using System.Threading;
 
@@ -35,12 +36,12 @@ namespace EliteDangerousCompanionAPI
                 }
             }
 
-
-            OAuth2 auth = OAuth2.Load(name);
+            OAuth2Provider provider = new OAuth2Provider(ConfigurationManager.AppSettings["ClientID"], ConfigurationManager.AppSettings["AppName"]);
+            OAuth2 auth = provider.Load(name);
 
             if (auth == null || !auth.Refresh())
             {
-                var req = OAuth2.Authorize();
+                var req = provider.Authorize();
                 Console.WriteLine(req.AuthURL);
                 auth = req.GetAuth();
             }
