@@ -125,7 +125,7 @@ namespace EliteDangerousCompanionAPI
                 resp.StatusCode = 200;
                 resp.StatusDescription = "OK";
                 resp.ContentType = "text/plain";
-                resp.OutputStream.Write(Encoding.ASCII.GetBytes("OK"));
+                resp.OutputStream.Write(Encoding.ASCII.GetBytes("OK"), 0, 2);
                 resp.Close();
                 Waithandle.Set();
             }
