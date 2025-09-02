@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SystemTest": {
+      "commandName": "Project",
+      "commandLineArgs": "\"F:\\Data\\Journals\\Anaphylaxis Majoris\\Journals\" \"F:\\Data\\Journals\\Bravada Cadelanne\\Journals\" \"F:\\Data\\Journals\\Bravada Charante\\Journals\" \"F:\\Data\\Journals\\Traumatophobiac\\Journals\" \"F:\\Users\\klightspeed\\SavedGames\\Frontier Developments\\Elite Dangerous\""
+    }
+  }
+}
