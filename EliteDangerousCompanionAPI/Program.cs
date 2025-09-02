@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Configuration;
+using Microsoft.Extensions.Configuration;
 using System.IO;
 using System.Threading;
 
@@ -36,7 +36,14 @@ namespace EliteDangerousCompanionAPI
                 }
             }
 
-            OAuth2Provider provider = new OAuth2Provider(ConfigurationManager.AppSettings["ClientID"], ConfigurationManager.AppSettings["AppName"]);
+            var config =
+                new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: true)
+                    .AddUserSecrets(System.Reflection.Assembly.GetExecutingAssembly(), optional: true)
+                    .Build();
+
+            OAuth2Provider provider = new OAuth2Provider(config.GetSection("OAuth2").Get<OAuth2Settings>());
             OAuth2 auth = provider.Load(name);
 
             if (auth == null || !auth.Refresh())

@@ -4,11 +4,19 @@
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net8.0;netstandard2.0;net48</TargetFrameworks>
     <LangVersion>9.0</LangVersion>
+    <UserSecretsId>0dd2deac-bee3-4a43-88d9-4504ac054429</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.8" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
