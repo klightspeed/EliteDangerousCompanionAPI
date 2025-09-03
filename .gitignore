@@ -2,6 +2,7 @@ bin
 obj
 packages
 .vs
+.idea
 *.csproj.user
 *.suo
 Thumbs.db
@@ -10,3 +11,4 @@ Thumbs.db
 App.*.config
 .*.sw?
 *~
+launchSettings.json
