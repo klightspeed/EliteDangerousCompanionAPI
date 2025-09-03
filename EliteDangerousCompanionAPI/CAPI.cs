@@ -10,11 +10,15 @@ namespace EliteDangerousCompanionAPI
 {
     public class CAPI
     {
-        private const string ProfileURL = "https://companion.orerve.net/profile";
-        private const string MarketURL = "https://companion.orerve.net/market";
-        private const string ShipyardURL = "https://companion.orerve.net/shipyard";
-        private const string CommunityGoalsURL = "https://companion.orerve.net/communitygoals";
-        private const string JournalURL = "https://companion.orerve.net/journal";
+        private const string LiveURLBase = "https://companion.orerve.net";
+        private const string LegacyURLBase = "https://companion-legacy.orerve.net";
+        private const string BetaURLBase = "https://companion-pts.orerve.net";
+        private const string ProfileEndpoint = "/profile";
+        private const string MarketEndpoint = "/market";
+        private const string ShipyardEndpoint = "/shipyard";
+        private const string CommunityGoalsEndpoint = "/communitygoals";
+        private const string FleetCarrierEndpoint = "/communitygoals";
+        private const string JournalEndpoint = "/journal";
 
         public OAuth2 OAuth { get; private set; }
         public bool Beta { get; private set; }
@@ -31,16 +35,14 @@ namespace EliteDangerousCompanionAPI
             Legacy = legacy;
         }
 
-        private JObject Get(string url)
+        private JObject Get(string endpoint)
         {
-            if (Beta)
+            string url = (Beta, Legacy) switch
             {
-                url = url.Replace("https://companion", "https://pts-companion");
-            }
-            else if (Legacy)
-            {
-                url = url.Replace("https://companion", "https://legacy-companion");
-            }
+                (false, false) => LiveURLBase + endpoint,
+                (false, true) => LegacyURLBase + endpoint,
+                (true, _) => BetaURLBase + endpoint
+            };
 
             return OAuth.ExecuteGetRequest(url, response =>
             {
@@ -57,16 +59,14 @@ namespace EliteDangerousCompanionAPI
             });
         }
 
-        private string GetString(string url)
+        private string GetString(string endpoint)
         {
-            if (Beta)
+            string url = (Beta, Legacy) switch
             {
-                url = url.Replace("https://companion", "https://pts-companion");
-            }
-            else if (Legacy)
-            {
-                url = url.Replace("https://companion", "https://legacy-companion");
-            }
+                (false, false) => LiveURLBase + endpoint,
+                (false, true) => LegacyURLBase + endpoint,
+                (true, _) => BetaURLBase + endpoint
+            };
 
             return OAuth.ExecuteGetRequest(url, response =>
             {
@@ -82,22 +82,27 @@ namespace EliteDangerousCompanionAPI
 
         public JObject GetProfile()
         {
-            return Get(ProfileURL);
+            return Get(ProfileEndpoint);
         }
 
         public JObject GetMarket()
         {
-            return Get(MarketURL);
+            return Get(MarketEndpoint);
         }
 
         public JObject GetShipyard()
         {
-            return Get(ShipyardURL);
+            return Get(ShipyardEndpoint);
         }
 
         public JObject GetCommunityGoals()
         {
-            return Get(CommunityGoalsURL);
+            return Get(CommunityGoalsEndpoint);
+        }
+
+        public JObject GetFleetCarrier()
+        {
+            return Get(FleetCarrierEndpoint);
         }
 
         private JObject TryParseJson(string data)
@@ -114,7 +119,12 @@ namespace EliteDangerousCompanionAPI
 
         public JObject[] GetJournal(DateTime date)
         {
-            return GetString(JournalURL + "/" + date.ToString("yyyy/MM/dd")).Split('\n').Select(l => TryParseJson(l)).ToArray();
+            return GetString(JournalEndpoint + "/" + date.ToString("yyyy/MM/dd")).Split('\n').Select(l => TryParseJson(l)).ToArray();
+        }
+
+        public string[] GetJournalRaw(DateTime date)
+        {
+            return GetString(JournalEndpoint + "/" + date.ToString("yyyy/MM/dd")).Split('\n');
         }
     }
 }
