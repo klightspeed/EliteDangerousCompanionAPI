@@ -19,6 +19,8 @@ namespace EliteDangerousCompanionAPI
         private const string CommunityGoalsEndpoint = "/communitygoals";
         private const string FleetCarrierEndpoint = "/communitygoals";
         private const string JournalEndpoint = "/journal";
+        private const string VisitedStarsEndpoint = "/visitedstars";
+        private const string SquadronEndpoint = "/squadron";
 
         public OAuth2 OAuth { get; private set; }
         public bool Beta { get; private set; }
@@ -80,6 +82,29 @@ namespace EliteDangerousCompanionAPI
             });
         }
 
+        private byte[] GetBinary(string endpoint)
+        {
+            string url = (Beta, Legacy) switch
+            {
+                (false, false) => LiveURLBase + endpoint,
+                (false, true) => LegacyURLBase + endpoint,
+                (true, _) => BetaURLBase + endpoint
+            };
+
+            return OAuth.ExecuteGetRequest(url, response =>
+            {
+                if (response.StatusCode == (HttpStatusCode)102 /* HttpStatusCode.Processing */)
+                {
+                    return null;
+                }
+
+                using var memstream = new MemoryStream();
+                using var stream = response.GetResponseStream();
+                stream.CopyTo(memstream);
+                return memstream.ToArray();
+            });
+        }
+
         public JObject GetProfile()
         {
             return Get(ProfileEndpoint);
@@ -103,6 +128,16 @@ namespace EliteDangerousCompanionAPI
         public JObject GetFleetCarrier()
         {
             return Get(FleetCarrierEndpoint);
+        }
+
+        public JObject GetSquadron()
+        {
+            return Get(SquadronEndpoint);
+        }
+
+        public byte[] GetVisitedStars()
+        {
+            return GetBinary(VisitedStarsEndpoint);
         }
 
         private JObject TryParseJson(string data)
