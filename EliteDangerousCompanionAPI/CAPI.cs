@@ -1,6 +1,4 @@
-﻿using System.Text;
-using System.IO;
-using Newtonsoft.Json;
+﻿using System.IO;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using System;
@@ -48,16 +46,8 @@ namespace EliteDangerousCompanionAPI
 
             return OAuth.ExecuteGetRequest(url, response =>
             {
-                using (var stream = response.GetResponseStream())
-                {
-                    using (var textreader = new StreamReader(stream, Encoding.UTF8))
-                    {
-                        using (var jsonreader = new JsonTextReader(textreader))
-                        {
-                            return JObject.Load(jsonreader);
-                        }
-                    }
-                }
+                var json = response.Content.ReadAsStringAsync().Result;
+                return JObject.Parse(json);
             });
         }
 
@@ -72,13 +62,7 @@ namespace EliteDangerousCompanionAPI
 
             return OAuth.ExecuteGetRequest(url, response =>
             {
-                using (var stream = response.GetResponseStream())
-                {
-                    using (var textreader = new StreamReader(stream, Encoding.UTF8))
-                    {
-                        return textreader.ReadToEnd();
-                    }
-                }
+                return response.Content.ReadAsStringAsync().Result;
             });
         }
 
@@ -99,7 +83,7 @@ namespace EliteDangerousCompanionAPI
                 }
 
                 using var memstream = new MemoryStream();
-                using var stream = response.GetResponseStream();
+                using var stream = response.Content.ReadAsStreamAsync().Result;
                 stream.CopyTo(memstream);
                 return memstream.ToArray();
             });
@@ -140,7 +124,7 @@ namespace EliteDangerousCompanionAPI
             return GetBinary(VisitedStarsEndpoint);
         }
 
-        private JObject TryParseJson(string data)
+        private static JObject TryParseJson(string data)
         {
             try
             {

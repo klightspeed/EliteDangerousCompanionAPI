@@ -43,8 +43,8 @@ namespace EliteDangerousCompanionAPI
                     .AddUserSecrets(System.Reflection.Assembly.GetExecutingAssembly(), optional: true)
                     .Build();
 
-            OAuth2Provider provider = new OAuth2Provider(config.GetSection("OAuth2").Get<OAuth2Settings>());
-            OAuth2 auth = provider.Load(name);
+            var provider = new OAuth2Provider(config.GetSection("OAuth2").Get<OAuth2Settings>());
+            var auth = provider.Load(name);
 
             if (auth == null || !auth.Refresh())
             {

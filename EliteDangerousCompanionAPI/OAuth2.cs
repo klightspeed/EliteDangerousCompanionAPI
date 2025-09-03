@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Text;
 using System.Net;
 using System.IO;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Net.Http;
+using System.Collections.Generic;
+using System.Net.Http.Headers;
 
 namespace EliteDangerousCompanionAPI
 {
@@ -16,14 +17,16 @@ namespace EliteDangerousCompanionAPI
 
         private readonly string ClientID;
         private readonly string AppName;
+        private readonly HttpClient HttpClient;
         private string AccessToken;
         private string RefreshToken;
         private string TokenType;
 
-        public OAuth2(string clientid, string appname, string accessToken, string refreshToken, string tokenType)
+        public OAuth2(string clientid, string appname, HttpClient httpClient, string accessToken, string refreshToken, string tokenType)
         {
             ClientID = clientid;
             AppName = appname;
+            HttpClient = httpClient;
             AccessToken = accessToken;
             RefreshToken = refreshToken;
             TokenType = tokenType;
@@ -36,14 +39,15 @@ namespace EliteDangerousCompanionAPI
 
         public void Save(string cmdr)
         {
-            var jo = new JObject
-            {
-                ["access_token"] = AccessToken,
-                ["refresh_token"] = RefreshToken,
-                ["token_type"] = TokenType
-            };
-
-            File.WriteAllText(cmdr == null ? "access-token.json" : $"access-token_{cmdr}.json", jo.ToString());
+            File.WriteAllText(
+                cmdr == null ? "access-token.json" : $"access-token_{cmdr}.json",
+                JsonConvert.SerializeObject(new
+                {
+                    access_token = AccessToken,
+                    refresh_token = RefreshToken,
+                    token_type = TokenType
+                })
+            );
         }
 
         public bool Refresh()
@@ -51,97 +55,64 @@ namespace EliteDangerousCompanionAPI
             try
             {
                 string tokenurl = AuthServerTokenURL;
-                string postdata =
-                    "grant_type=refresh_token" +
-                    "&client_id=" + Uri.EscapeDataString(ClientID) +
-                    "&refresh_token=" + Uri.EscapeDataString(RefreshToken);
 
-                var httpreq = WebRequest.CreateHttp(tokenurl);
-                httpreq.Headers[HttpRequestHeader.UserAgent] = AppName;
-                httpreq.Headers[HttpRequestHeader.Accept] = "application/json";
-                httpreq.ContentType = "application/x-www-form-urlencoded";
-                httpreq.Method = "POST";
-
-                using (var stream = httpreq.GetRequestStream())
+                using var reqmsg = new HttpRequestMessage(HttpMethod.Post, tokenurl);
+                reqmsg.Headers.UserAgent.ParseAdd(AppName);
+                reqmsg.Headers.Accept.ParseAdd("application/json");
+                reqmsg.Content = new FormUrlEncodedContent(new Dictionary<string, string>
                 {
-                    using (var textwriter = new StreamWriter(stream))
-                    {
-                        textwriter.Write(postdata);
-                    }
-                }
+                    ["grant_type"] = "refresh_token",
+                    ["client_id"] = ClientID,
+                    ["refresh_token"] = RefreshToken
+                });
 
-                JObject jo;
+                using var respmsg = HttpClient.SendAsync(reqmsg).Result;
+                respmsg.EnsureSuccessStatusCode();
+                var resptext = respmsg.Content.ReadAsStringAsync().Result;
 
-                using (var httpresp = httpreq.GetResponse())
-                {
-                    using (var respstream = httpresp.GetResponseStream())
-                    {
-                        using (var textreader = new StreamReader(respstream))
-                        {
-                            using (var jsonreader = new JsonTextReader(textreader))
-                            {
-                                jo = JObject.Load(jsonreader);
-                            }
-                        }
-                    }
-                }
+                var tokenresp = JsonConvert.DeserializeAnonymousType(
+                    resptext,
+                    new { access_token = "", refresh_token = "", token_type = "" }
+                );
 
-                AccessToken = jo.Value<string>("access_token");
-                RefreshToken = jo.Value<string>("refresh_token");
-                TokenType = jo.Value<string>("token_type");
+                AccessToken = tokenresp.access_token;
+                RefreshToken = tokenresp.refresh_token;
+                TokenType = tokenresp.token_type;
 
                 return true;
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Trace.WriteLine($"Error refreshing access token: {ex}");
                 return false;
             }
         }
 
-        public HttpWebRequest CreateRequest(string url)
+        public void Authorize(HttpRequestMessage msg)
         {
-            var request = WebRequest.CreateHttp(url);
-            request.Headers[HttpRequestHeader.Authorization] = TokenType + " " + AccessToken;
-            request.Headers[HttpRequestHeader.UserAgent] = AppName;
-            return request;
+            msg.Headers.Authorization = new AuthenticationHeaderValue(TokenType, AccessToken);
+            msg.Headers.UserAgent.Clear();
+            msg.Headers.UserAgent.ParseAdd(AppName);
         }
 
-        public T ExecuteGetRequest<T>(string url, Func<HttpWebResponse, T> respact, Action<HttpWebRequest> reqact = null)
+        public T ExecuteGetRequest<T>(string url, Func<HttpResponseMessage, T> respact, Action<HttpRequestMessage> reqact = null)
         {
-            HttpWebResponse resp = null;
-            HttpWebRequest req;
-
-            try
+            for (int retries = 1; ; retries--)
             {
-                req = CreateRequest(url);
-                req.Method = "GET";
-                reqact?.Invoke(req);
-                resp = (HttpWebResponse)req.GetResponse();
-                return respact(resp);
-            }
-            catch (WebException ex) when (ex.Response is HttpWebResponse exresp && exresp.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                using var memstream = new MemoryStream();
+                using var reqmsg = new HttpRequestMessage(HttpMethod.Get, url);
+                reqact?.Invoke(reqmsg);
+                Authorize(reqmsg);
+                using var respmsg = HttpClient.SendAsync(reqmsg).Result;
 
-                using (var exstream = exresp.GetResponseStream())
+                if (respmsg.StatusCode == HttpStatusCode.Unauthorized && retries > 0)
                 {
-                    exstream.CopyTo(memstream);
+                    Refresh();
+                    continue;
                 }
 
-                var exdata = memstream.ToArray();
-                var exstring = Encoding.UTF8.GetString(exdata);
+                respmsg.EnsureSuccessStatusCode();
 
-                Refresh();
-
-                req = CreateRequest(url);
-                req.Method = "GET";
-                reqact?.Invoke(req);
-                resp = (HttpWebResponse)req.GetResponse();
-                return respact(resp);
-            }
-            finally
-            {
-                resp?.Dispose();
+                return respact(respmsg);
             }
         }
 
@@ -149,13 +120,7 @@ namespace EliteDangerousCompanionAPI
         {
             return ExecuteGetRequest(AuthServerDecodeURL, response =>
             {
-                using (var stream = response.GetResponseStream())
-                {
-                    using (var reader = new StreamReader(stream))
-                    {
-                        return reader.ReadToEnd();
-                    }
-                }
+                return response.Content.ReadAsStringAsync().Result;
             });
         }
     }

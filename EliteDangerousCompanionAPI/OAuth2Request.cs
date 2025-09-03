@@ -4,9 +4,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Net;
 using System.Threading;
-using System.IO;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Net.Http;
 
 namespace EliteDangerousCompanionAPI
 {
@@ -18,15 +17,17 @@ namespace EliteDangerousCompanionAPI
         private string State { get; } = GetBase64Random(8);
         public string AuthURL { get; private set; }
 
+        private HttpClient HttpClient { get; }
         private HttpListener Listener { get; }
         private ManualResetEventSlim Waithandle { get; } = new ManualResetEventSlim(false);
         private string RedirectURI { get; }
         private OAuth2 OAuth { get; set; }
 
-        public OAuth2Request(string clientid, string appname)
+        public OAuth2Request(string clientid, string appname, HttpClient httpClient)
         {
             AppName = appname;
             ClientID = clientid;
+            HttpClient = httpClient;
 
             try
             {
@@ -34,15 +35,25 @@ namespace EliteDangerousCompanionAPI
                 CodeVerifier = GetBase64Random(32);
                 State = GetBase64Random(8);
                 string challenge = Base64URLEncode(SHA256(Encoding.ASCII.GetBytes(CodeVerifier)));
-                RedirectURI = $"http://localhost:{port}/";
-                AuthURL = OAuth2.AuthServerAuthURL +
-                    "?scope=" + Uri.EscapeDataString(OAuth2.Scope) +
-                    "&response_type=code" +
-                    "&client_id=" + Uri.EscapeDataString(ClientID) +
-                    "&code_challenge=" + Uri.EscapeDataString(challenge) +
-                    "&code_challenge_method=S256" +
-                    "&state=" + Uri.EscapeDataString(State) +
-                    "&redirect_uri=" + Uri.EscapeDataString(RedirectURI);
+
+                var query = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["scope"] = OAuth2.Scope,
+                    ["response_type"] = "code",
+                    ["client_id"] = ClientID,
+                    ["code_challenge"] = challenge,
+                    ["code_challenge_method"] = "S256",
+                    ["state"] = State,
+                    ["redirect_uri"] = RedirectURI
+                });
+
+                var uribuilder = new UriBuilder(OAuth2.AuthServerAuthURL)
+                {
+                    Query = query.ReadAsStringAsync().Result
+                };
+
+                AuthURL = uribuilder.Uri.ToString();
+
                 Listener.BeginGetContext(EndGetContext, null);
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
@@ -64,43 +75,29 @@ namespace EliteDangerousCompanionAPI
             var code = req.QueryString["code"];
 
             string tokenurl = OAuth2.AuthServerTokenURL;
-            string postdata =
-                "grant_type=authorization_code" +
-                "&client_id=" + Uri.EscapeDataString(ClientID) +
-                "&code_verifier=" + Uri.EscapeDataString(CodeVerifier) +
-                "&code=" + Uri.EscapeDataString(code) +
-                "&redirect_uri=" + RedirectURI;
-            var httpreq = HttpWebRequest.Create(tokenurl);
-            httpreq.Headers[HttpRequestHeader.UserAgent] = AppName;
-            httpreq.Headers[HttpRequestHeader.Accept] = "application/json";
-            httpreq.ContentType = "application/x-www-form-urlencoded";
-            httpreq.Method = "POST";
 
-            using (var stream = httpreq.GetRequestStream())
+            using var reqmsg = new HttpRequestMessage(HttpMethod.Post, tokenurl);
+            reqmsg.Headers.UserAgent.ParseAdd(AppName);
+            reqmsg.Headers.Accept.ParseAdd("application/json");
+            reqmsg.Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                using (var textwriter = new StreamWriter(stream))
-                {
-                    textwriter.Write(postdata);
-                }
-            }
+                ["grant_type"] = "authorization_code",
+                ["client_id"] = ClientID,
+                ["code_verifier"] = CodeVerifier,
+                ["code"] = code,
+                ["redirect_uri"] = RedirectURI
+            });
 
-            JObject jo;
+            using var respmsg = HttpClient.SendAsync(reqmsg).Result;
+            respmsg.EnsureSuccessStatusCode();
+            var resptext = respmsg.Content.ReadAsStringAsync().Result;
+            
+            var tokenresp = JsonConvert.DeserializeAnonymousType(
+                resptext,
+                new { access_token = "", refresh_token = "", token_type = "" }
+            );
 
-            using (var httpresp = httpreq.GetResponse())
-            {
-                using (var respstream = httpresp.GetResponseStream())
-                {
-                    using (var textreader = new StreamReader(respstream))
-                    {
-                        using (var jsonreader = new JsonTextReader(textreader))
-                        {
-                            jo = JObject.Load(jsonreader);
-                        }
-                    }
-                }
-            }
-
-            var oauth = new OAuth2(ClientID, AppName, jo.Value<string>("access_token"), jo.Value<string>("refresh_token"), jo.Value<string>("token_type"));
+            var oauth = new OAuth2(ClientID, AppName, HttpClient, tokenresp.access_token, tokenresp.refresh_token, tokenresp.token_type);
             this.OAuth = oauth;
 
             var resp = ctx.Response;
@@ -121,13 +118,14 @@ namespace EliteDangerousCompanionAPI
         public void Dispose()
         {
             Listener.Stop();
+            GC.SuppressFinalize(this);
         }
 
         private static HttpListener CreateListener(out int port)
         {
             HttpListener listener;
-            HashSet<int> usedports = new HashSet<int>();
-            Random rnd = new Random();
+            var usedports = new HashSet<int>();
+            var rnd = new Random();
 
             while (true)
             {
@@ -170,8 +168,12 @@ namespace EliteDangerousCompanionAPI
 
         private static byte[] SHA256(byte[] data)
         {
+#if NETCOREAPP2_2_OR_GREATER
+            return System.Security.Cryptography.SHA256.HashData(data);
+#else
             var sha = System.Security.Cryptography.SHA256.Create();
             return sha.ComputeHash(data);
+#endif
         }
     }
 }
